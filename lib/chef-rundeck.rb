@@ -38,25 +38,21 @@ class ChefRundeck < Sinatra::Base
   end
 
   get '/' do
-    content_type 'text/xml'
-    response = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE project PUBLIC "-//DTO Labs Inc.//DTD Resources Document 1.0//EN" "project.dtd"><project>'
-    Chef::Node.list(true).each do |node_array|
-      node = node_array[1]
-      begin
-        response << node_xml(node)
-      rescue => e
-        Chef::Log.error("Error processing node: #{node.name}, skipping. #{e}")
-        next
-      end
-    end
-    response << "</project>"
+    nodes = Chef::Node.list(true)
+    respond_with_nodes(nodes)
   end
 
   get '/:environment' do
+    nodes = Chef::Node.list_by_environment(params[:environment], true)
+    respond_with_nodes(nodes)
+  end
+
+  private
+  def respond_with_nodes(nodes)
     content_type 'text/xml'
     response = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE project PUBLIC "-//DTO Labs Inc.//DTD Resources Document 1.0//EN" "project.dtd"><project>'
-    Chef::Node.list_by_environment(params[:environment], true).each do |node_array|
-      node = node_array[1]
+    nodes.each_key do |node_name|
+      node = nodes[node_name]
       begin
         response << node_xml(node)
       rescue => e
@@ -67,7 +63,6 @@ class ChefRundeck < Sinatra::Base
     response << "</project>"
   end
 
-  private
   def node_xml(node)
     #--
     # Newly created nodes and nodes reloaded with knife will not have these values set.
